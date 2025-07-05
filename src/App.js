@@ -12,6 +12,7 @@ function App() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleTopicChange = (event) => {
     setTopic(event.target.value);
@@ -22,19 +23,31 @@ function App() {
     setSelectedAnswers({});
     setScore(0);
     setCurrentQuestionIndex(0);
+    setIsLoading(true); // Set loading to true when fetch starts
     try {
-      const response = await fetch(`http://192.168.1.3:8080/generate-questions?topic=${selectedTopic}`);
+      const response = await fetch(`http://192.168.1.3:8080/generate-questions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic: selectedTopic }),
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       console.log("Received questions data:", data);
-      setQuestions(data);
-      // Scroll to the bottom of the page after questions are loaded, adding a small offset
+      const questionsWithCorrectIndex = data.map(q => ({
+        ...q,
+        correctOptionIndex: q.options.indexOf(q.answer)
+      }));
+      setQuestions(questionsWithCorrectIndex);
       window.scrollTo({ top: document.body.scrollHeight + 100, behavior: 'smooth' });
     } catch (error) {
       console.error("Error fetching questions:", error);
       setQuestions([]);
+    } finally {
+      setIsLoading(false); // Set loading to false when fetch completes (success or error)
     }
   };
 
@@ -98,7 +111,16 @@ function App() {
         handleTopicChange={handleTopicChange}
       />
 
-      {questions.length > 0 && !showResults && (
+      {isLoading && (
+        <div className="text-center mt-4">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Generating questions, please wait...</p>
+        </div>
+      )}
+
+      {questions.length > 0 && !showResults && !isLoading && (
         <div className="quiz-section mt-4">
           <QuestionIndicator
             current={currentQuestionIndex}
