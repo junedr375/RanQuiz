@@ -7,6 +7,7 @@ import TopicSelector from './components/TopicSelector';
 import QuizNavigationButtons from './components/QuizNavigationButtons';
 import QuizResults from './components/QuizResults';
 import LoadingIndicator from './components/LoadingIndicator';
+import CustomTopicInput from './components/CustomTopicInput';
 
 function App() {
   const [topic, setTopic] = useState('');
@@ -161,11 +162,17 @@ function App() {
           {isTopicSelectorOpen && (
             <TopicSelector
               fetchQuestions={fetchQuestions}
-              topic={topic}
-              handleTopicChange={handleTopicChange}
             />
           )}
         </div>
+      )}
+
+      {!questions.length > 0 && !isReviewMode && (
+        <CustomTopicInput
+          fetchQuestions={fetchQuestions}
+          topic={topic}
+          handleTopicChange={handleTopicChange}
+        />
       )}
 
       {isLoading && <LoadingIndicator />}
