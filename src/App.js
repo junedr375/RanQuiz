@@ -4,6 +4,9 @@ import './App.css';
 import QuestionCard from './components/QuestionCard';
 import QuestionIndicator from './components/QuestionIndicator';
 import TopicSelector from './components/TopicSelector';
+import QuizNavigationButtons from './components/QuizNavigationButtons';
+import QuizResults from './components/QuizResults';
+import LoadingIndicator from './components/LoadingIndicator';
 
 function App() {
   const [topic, setTopic] = useState('');
@@ -165,14 +168,7 @@ function App() {
         </div>
       )}
 
-      {isLoading && (
-        <div className="text-center mt-4">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-2">Generating questions, please wait...</p>
-        </div>
-      )}
+      {isLoading && <LoadingIndicator />}
 
       {(questions.length > 0 && !showResults && !isLoading) && (
         <div className="quiz-section mt-4 position-relative">
@@ -195,48 +191,24 @@ function App() {
             isReviewMode={isReviewMode} // Pass isReviewMode to QuestionCard
           />
 
-          <div className="d-flex justify-content-between mt-3">
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={handlePreviousQuestion}
-              disabled={isFirstQuestion}
-            >
-              Previous
-            </button>
-            <div className="d-flex gap-2">
-              {!isReviewMode && (
-                <button
-                  className="btn btn-outline-warning btn-sm"
-                  onClick={handleSkipQuestion}
-                  disabled={isLastQuestion}
-                >
-                  Skip
-                </button>
-              )}
-              <button
-                className="btn btn-dark btn-sm"
-                onClick={handleNextQuestion}
-              >
-                {isReviewMode ? (isLastQuestion ? 'Back to Results' : 'Next') : (isLastQuestion ? 'Submit Quiz' : 'Next')}
-              </button>
-            </div>
-          </div>
+          <QuizNavigationButtons
+            handlePreviousQuestion={handlePreviousQuestion}
+            handleNextQuestion={handleNextQuestion}
+            handleSkipQuestion={handleSkipQuestion}
+            isReviewMode={isReviewMode}
+            isFirstQuestion={isFirstQuestion}
+            isLastQuestion={isLastQuestion}
+          />
         </div>
       )}
 
       {showResults && (
-        <div className="results-section mt-4 p-3 border rounded bg-light">
-          <h2>Quiz Results</h2>
-          <p className="lead">You scored {score} out of {questions.length} correct answers!</p>
-          <div className="d-flex justify-content-center gap-2 mt-3">
-            <button className="btn btn-outline-info" onClick={handleResetQuiz}>
-              Reset Quiz
-            </button>
-            <button className="btn btn-primary" onClick={handleReviewAnswers}>
-              Review Answers
-            </button>
-          </div>
-        </div>
+        <QuizResults
+          score={score}
+          totalQuestions={questions.length}
+          handleResetQuiz={handleResetQuiz}
+          handleReviewAnswers={handleReviewAnswers}
+        />
       )}
     </div>
   );
