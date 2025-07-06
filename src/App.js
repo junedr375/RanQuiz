@@ -13,6 +13,8 @@ function App() {
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTopicSelectorOpen, setIsTopicSelectorOpen] = useState(true); // New state for collapse
+  const [isReviewMode, setIsReviewMode] = useState(false); // New state for review mode
 
   const handleTopicChange = (event) => {
     setTopic(event.target.value);
@@ -24,6 +26,7 @@ function App() {
     setScore(0);
     setCurrentQuestionIndex(0);
     setIsLoading(true); // Set loading to true when fetch starts
+    setTopic(selectedTopic); // Set the topic state here
     try {
       const response = await fetch(`http://192.168.1.3:8080/generate-questions`, {
         method: 'POST',
@@ -52,17 +55,29 @@ function App() {
   };
 
   const handleOptionChange = (questionId, optionIndex) => {
-    setSelectedAnswers({
-      ...selectedAnswers,
-      [questionId]: optionIndex,
-    });
+    if (!isReviewMode) { // Only allow changing answers if not in review mode
+      setSelectedAnswers({
+        ...selectedAnswers,
+        [questionId]: optionIndex,
+      });
+    }
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    if (isReviewMode) {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        // End of review mode
+        setIsReviewMode(false);
+        setShowResults(true); // Go back to results page
+      }
     } else {
-      handleSubmitQuiz(); // Submit if it's the last question
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        handleSubmitQuiz(); // Submit if it's the last question
+      }
     }
   };
 
@@ -95,6 +110,18 @@ function App() {
     setShowResults(false);
     setScore(0);
     setCurrentQuestionIndex(0);
+    setIsTopicSelectorOpen(true); // Ensure topic selector is open on reset
+    setIsReviewMode(false); // Exit review mode on reset
+  };
+
+  const toggleTopicSelector = () => {
+    setIsTopicSelectorOpen(!isTopicSelectorOpen);
+  };
+
+  const handleReviewAnswers = () => {
+    setShowResults(false);
+    setIsReviewMode(true);
+    setCurrentQuestionIndex(0); // Start review from the first question
   };
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -105,11 +132,38 @@ function App() {
     <div className="App container mt-5">
       <h1 className="mb-4">Quiz Application</h1>
 
-      <TopicSelector
-        fetchQuestions={fetchQuestions}
-        topic={topic}
-        handleTopicChange={handleTopicChange}
-      />
+      {!questions.length > 0 && !isReviewMode && (
+        <div className="mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="mb-0">Choose a Topic:</h4>
+            <button
+              onClick={toggleTopicSelector}
+              className="btn btn-link p-0 text-dark"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                className={`bi bi-chevron-down ${isTopicSelectorOpen ? 'rotate-180' : ''}`}
+                viewBox="0 0 16 16"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"
+                />
+              </svg>
+            </button>
+          </div>
+          {isTopicSelectorOpen && (
+            <TopicSelector
+              fetchQuestions={fetchQuestions}
+              topic={topic}
+              handleTopicChange={handleTopicChange}
+            />
+          )}
+        </div>
+      )}
 
       {isLoading && (
         <div className="text-center mt-4">
@@ -120,17 +174,25 @@ function App() {
         </div>
       )}
 
-      {questions.length > 0 && !showResults && !isLoading && (
-        <div className="quiz-section mt-4">
+      {(questions.length > 0 && !showResults && !isLoading) && (
+        <div className="quiz-section mt-4 position-relative">
+          <button
+            className="btn btn-outline-danger btn-xs position-absolute top-0 end-0 mt-2 me-2"
+            onClick={handleResetQuiz}
+          >
+            Reset Quiz
+          </button>
           <QuestionIndicator
             current={currentQuestionIndex}
             total={questions.length}
+            topic={topic}
           />
           <QuestionCard
             question={currentQuestion}
             currentQuestionIndex={currentQuestionIndex}
             selectedAnswers={selectedAnswers}
             handleOptionChange={handleOptionChange}
+            isReviewMode={isReviewMode} // Pass isReviewMode to QuestionCard
           />
 
           <div className="d-flex justify-content-between mt-3">
@@ -142,18 +204,20 @@ function App() {
               Previous
             </button>
             <div className="d-flex gap-2">
-              <button
-                className="btn btn-outline-warning btn-sm"
-                onClick={handleSkipQuestion}
-                disabled={isLastQuestion}
-              >
-                Skip
-              </button>
+              {!isReviewMode && (
+                <button
+                  className="btn btn-outline-warning btn-sm"
+                  onClick={handleSkipQuestion}
+                  disabled={isLastQuestion}
+                >
+                  Skip
+                </button>
+              )}
               <button
                 className="btn btn-dark btn-sm"
                 onClick={handleNextQuestion}
               >
-                {isLastQuestion ? 'Submit Quiz' : 'Next'}
+                {isReviewMode ? (isLastQuestion ? 'Back to Results' : 'Next') : (isLastQuestion ? 'Submit Quiz' : 'Next')}
               </button>
             </div>
           </div>
@@ -164,9 +228,14 @@ function App() {
         <div className="results-section mt-4 p-3 border rounded bg-light">
           <h2>Quiz Results</h2>
           <p className="lead">You scored {score} out of {questions.length} correct answers!</p>
-          <button className="btn btn-outline-info mt-3" onClick={handleResetQuiz}>
-            Reset Quiz
-          </button>
+          <div className="d-flex justify-content-center gap-2 mt-3">
+            <button className="btn btn-outline-info" onClick={handleResetQuiz}>
+              Reset Quiz
+            </button>
+            <button className="btn btn-primary" onClick={handleReviewAnswers}>
+              Review Answers
+            </button>
+          </div>
         </div>
       )}
     </div>
