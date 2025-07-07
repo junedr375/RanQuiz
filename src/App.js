@@ -32,7 +32,7 @@ function App() {
     setIsLoading(true); // Set loading to true when fetch starts
     setTopic(selectedTopic); // Set the topic state here
     try {
-      const response = await fetch(`http://192.168.1.3:8080/generate-questions`, {
+      const response = await fetch(`https://ranquizbe-1.onrender.com/generate-questions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
